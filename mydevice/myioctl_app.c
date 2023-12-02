@@ -20,6 +20,7 @@ int main(){
         return -1;
     }
 
+    /*
     FILE *log_fp = fopen("log.txt", "r+") ;
     bool log_empty = false;
 
@@ -32,7 +33,7 @@ int main(){
         log_fp = fopen("log.txt", "w") ;
         log_empty = true;
     }
-
+    
     // Read in last count value
     if(!log_empty){
         int add_count;
@@ -46,6 +47,7 @@ int main(){
             ioctl(fd, MYIOCTL_INCREMENT, &add_count);
         }
     }
+    */
 
     // Example: Get the current counter value
     int counter_value;
@@ -58,7 +60,7 @@ int main(){
     if(scanf("%d", &increment_value) != 1){
         perror("Error redaing input");
         close(fd);
-        close(log_fp);
+        //close(log_fp);
         return -1;
     } 
     
@@ -68,12 +70,13 @@ int main(){
     ioctl(fd, MYIOCTL_GET_COUNT, &counter_value);
     printf("Updated counter value: %d\n", counter_value);
 
+    /*
     // Write the current count value back to log file
     fseek(log_fp, 0, SEEK_SET);
     fprintf(log_fp, "%d\n", counter_value);
 
+    close(log_fp); */
     close(fd);
-    close(log_fp);
 
     return 0;
 }

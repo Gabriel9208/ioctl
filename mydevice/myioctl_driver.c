@@ -13,7 +13,12 @@ MODULE_AUTHOR("G20");
 MODULE_DESCRIPTION("Simple IOCTL Example");
 
 static int myioctl_major;
-static int a_count = 0;
+static int counter = 0;
+
+static char buffer[1024];
+static size_t buffer_size = sizeof(buffer);
+static loff_t f_offset = 0;
+static struct file *log_file;
 
 // Function prototypes
 static int myioctl_open(struct inode *inode, struct file *filp);
@@ -37,12 +42,41 @@ static int __init myioctl_init(void){
     }
 
     pr_info("myioctl module loaded. Major number: %d\n", myioctl_major);
+
+    // Open exsited log file
+    log_file = filp_open("/var/log/mydevice.log", O_RDWR | O_CREAT, 0666);
+
+    if(IS_ERR(log_file)) pr_err("myioctl: Unable to open log file.");
+    else pr_info("myioctl: Log file open successfully.");
+
+    // Read counter value 
+    size_t bytes_read = kernel_read(log_file, buffer, buffer_size, &f_offset);
+
+    if(bytes_read > 0){
+        pr_info("myioctl: read success.");
+    }
+    else pr_err("myioctl: log file read fail.");
+
+    // Load value into counter
+    sscanf(buffer, "%d", &counter);
+    pr_info("myioctl: Counter loaded..");
+
     return 0;
 }
 
 // Module cleanup
 static void __exit myioctl_exit(void){
     unregister_chrdev(myioctl_major, "myioctl");
+
+    // Write counter value back to log file
+    if(log_file != NULL){
+        memset(buffer, 0, buffer_size);
+        f_offset = 0;
+        sprintf(buffer, "%d", counter);
+        kernel_write(log_file, buffer, buffer_size, &f_offset);
+        pr_info("myioctl: Counter value saved.");
+    }
+
     pr_info("myioctl module unloaded");
 }
 
@@ -71,19 +105,19 @@ static long myioctl_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
     switch(cmd){
         case MYIOCTL_RESET:
             pr_info("IOCTL: Resetting counter\n");
-            a_count = 0;
+            counter = 0;
             break;
 
         case MYIOCTL_GET_COUNT:
             pr_info("IOCTL: Getting counter value\n");
-            err = copy_to_user((int *)arg, &a_count, sizeof(int));
+            err = copy_to_user((int *)arg, &counter, sizeof(int));
             break;
 
         case MYIOCTL_INCREMENT:
             pr_info("IOCTL: Incrementing counter\n");
             err = copy_from_user(&tmp, (int *)arg, sizeof(int));
             if(err == 0){
-                a_count += tmp;
+                counter += tmp;
             }
             else pr_info("increment fail");
             break;
